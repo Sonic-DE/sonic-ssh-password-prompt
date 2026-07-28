@@ -6,10 +6,13 @@
 
 #include <memory>
 #include <sys/resource.h>
+#include <unistd.h>
 
 #include <KAboutData>
+#include <KConfigGroup>
 #include <KLocalizedString>
 #include <KMessageBox>
+#include <KSharedConfig>
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -296,12 +299,16 @@ int main(int argc, char **argv)
     QString item;
     bool ignoreKeychain = false;
     DisplayType displayType = DisplayType::Password;
+    bool askAgain = false;
 
     // Parse commandline arguments
     if (!parser.positionalArguments().isEmpty()) {
         dialog = parser.positionalArguments().at(0);
         parsePrompt(promptType, dialog, identifier, ignoreKeychain, displayType);
     }
+
+    auto cfg = KSharedConfig::openStateConfig();
+    KConfigGroup grp(cfg, QStringLiteral("Last Prompt"));
 
     if ((!ignoreKeychain) && (!identifier.isNull())) {
         QKeychain::ReadPasswordJob job(app.applicationName());
@@ -339,9 +346,18 @@ int main(int argc, char **argv)
                 }
             }
         }
+
+        if (!item.isEmpty() && grp.readEntry("PID", pid_t{-1}) == getppid() && grp.readEntry("Prompt", QString()) == dialog) {
+            qCInfo(LOG_KSSHASKPASS) << "SSH process" << getppid() << "asked for same prompt already, assuming stored password is incorrect";
+            askAgain = true;
+        }
     }
 
-    if (!item.isEmpty()) {
+    grp.deleteGroup();
+
+    if (!askAgain && !item.isEmpty()) {
+        grp.writeEntry("PID", getppid());
+        grp.writeEntry("Prompt", dialog);
         QTextStream(stdout) << item;
         return 0;
     }
@@ -419,6 +435,12 @@ int main(int argc, char **argv)
             ui.passwordLabel->hide();
         }
 
+        if (!item.isEmpty()) {
+            ui.lineEdit->setPassword(item);
+            ui.lineEdit->lineEdit()->selectAll();
+            ui.keepCheckBox->setChecked(true);
+        }
+
         if (dlg.exec() == QDialog::Accepted) {
             item = ui.lineEdit->password();
             remember = ui.keepCheckBox->isChecked();
@@ -432,6 +454,9 @@ int main(int argc, char **argv)
 
     if (!identifier.isEmpty() && remember.has_value()) {
         if (remember.value()) {
+            grp.writeEntry("PID", getppid());
+            grp.writeEntry("Prompt", dialog);
+
             QKeychain::WritePasswordJob job(app.applicationName());
             job.setKey(identifier);
             job.setTextData(item);
