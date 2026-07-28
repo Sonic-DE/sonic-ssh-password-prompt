@@ -32,6 +32,7 @@ find_package(Qt6Keychain ${QT_KEYCHAIN_MIN_VERSION} REQUIRED)
 add_definitions(-DQT_NO_NARROWING_CONVERSIONS_IN_CONNECT)
 
 find_package(KF6 ${KF6_MIN_VERSION} REQUIRED COMPONENTS
+    Config
     CoreAddons
     I18n
     WidgetsAddons
@@ -51,6 +52,7 @@ ki18n_wrap_ui(ksshaskpass_SRCS src/cleartextinputdialog.ui)
 add_executable(ksshaskpass ${ksshaskpass_SRCS})
 target_compile_definitions(ksshaskpass PRIVATE -DPROJECT_VERSION="${PROJECT_VERSION}")
 target_link_libraries(ksshaskpass
+    KF6::ConfigCore
     KF6::CoreAddons
     KF6::I18n
     KF6::WidgetsAddons
