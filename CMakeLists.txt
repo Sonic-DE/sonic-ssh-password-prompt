@@ -11,6 +11,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_AUTOUIC ON)
+
 find_package(ECM ${KF6_MIN_VERSION} REQUIRED NO_MODULE)
 set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 
@@ -44,6 +46,7 @@ ecm_set_disabled_deprecation_versions(QT 6.8.1
 )
 
 set(ksshaskpass_SRCS src/main.cpp)
+ki18n_wrap_ui(ksshaskpass_SRCS src/cleartextinputdialog.ui)
  
 add_executable(ksshaskpass ${ksshaskpass_SRCS})
 target_compile_definitions(ksshaskpass PRIVATE -DPROJECT_VERSION="${PROJECT_VERSION}")
